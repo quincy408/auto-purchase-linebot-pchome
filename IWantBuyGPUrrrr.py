@@ -72,7 +72,7 @@ def decrypt(encrypted, passphrase):
     aes = AES.new(key, AES.MODE_CBC, iv)
     return unpad(aes.decrypt(encrypted[16:]))
 
-def AkOutput(): #產出Ak用來加密表單內容
+def AkOutput():
     Passphrase = str(math.floor((random.random() * 1000000) + 1)).encode()
     Passphrase2 = now_milliseconds().encode()
     Ak = str(encrypt(Passphrase, Passphrase2))
@@ -83,7 +83,7 @@ def AkOutput(): #產出Ak用來加密表單內容
 def EncryptionData(Ak,FrmData): #加密表單資料
     enFrmData = {}
     for i in FrmData:
-        enData = str(encrypt(FrmData[i].encode(), Ak.encode()))#加密後匯入
+        enData = str(encrypt(FrmData[i].encode(), Ak.encode()))
         enData = enData.replace("b'", "")
         enData = enData.replace("'", "")
         enFrmData[i] = enData
@@ -103,12 +103,11 @@ def SubmitOrder(enFrmData,Ak,enFrmUrl):
     entoken = entoken.replace("b'", "")
     entoken = entoken.replace("'", "")
     enFrmData['Token'] = entoken
-    #將驗證用token回傳
     enFrmReturn = LocalSession.get(enFrmUrl, headers = Headers, verify=False)
     enFrmReturn.encoding = 'UTF-8'
     soup1 = BeautifulSoup(enFrmReturn.text,"html5lib")
     rpcTK = soup1.find(id = 'recaptcha-token')['value']
-    rpcFrmUrl = 'https://ecssl.pchome.com.tw/sys/cflow/fsapi/recaptcha'#先把token回傳給pchome
+    rpcFrmUrl = 'https://ecssl.pchome.com.tw/sys/cflow/fsapi/recaptcha'
     rpcFrmData = {'token':rpcTK}
     LocalSession.post(rpcFrmUrl, headers = Headers,data=rpcFrmData)
     recaptchaTK = str(encrypt(rpcTK.encode(), Ak.encode()))
@@ -152,61 +151,61 @@ def UpdataCookieAndTokenUrl(a, p):
     return full_cookie ,TokenUrl
 
 def CookieSET(ChromeCookies):
-    Cookie = {} #購物車中的Cookie
-    for item in ChromeCookies.split(';'): #將ChromeCookie轉換為一般cookie
+    Cookie = {} 
+    for item in ChromeCookies.split(';'):
         name, value = item.strip().split('=', 1)
         Cookie[name] = value
     Cookies = requests.utils.cookiejar_from_dict(Cookie, cookiejar=None, overwrite=True)
-    LocalSession = requests.Session() #開始session
-    LocalSession.cookies = Cookies #設置cookie
-    Headers = { #設置標頭檔
+    LocalSession = requests.Session() 
+    LocalSession.cookies = Cookies 
+    Headers = { 
             'content-type': 'application/x-www-form-urlencoded',
             'origin': 'https://24h.pchome.com.tw',
             'x-requested-with': 'XMLHttpRequest',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36',
             'referer':'https://24h.pchome.com.tw/prod/DRAD1K-A900B8OUT?fq=/S/DRAD1K'
             }
-    return Headers, LocalSession  #headers 與 添加過cookie的Session
-def PKTokenChack():#登入確認與PK Token取得
+    return Headers, LocalSession 
+def PKTokenChack():
     Headers, LocalSession = CookieSET(ChromeCookies)
     PKURL = 'https://ecssl.pchome.com.tw/sys/cflow/fsapi/getPK'
-    PKData = LocalSession.get(PKURL, headers=Headers)#抓取pk 與 token
-    PKData.encoding = 'UTF-8' #UTF-8編碼
+    PKData = LocalSession.get(PKURL, headers=Headers)
+    PKData.encoding = 'UTF-8' 
     try:
-        PKData = PKData.json() #轉換為Json格式
+        PKData = PKData.json()
     except:
         print('未成功使用cookie登入 請檢查一下cookie是否正確')
         return 0, 0
     else:
         print('cookie與session成功登入')
-        return PKData['PK'], PKData['Token'] #PK 與 Token
-def BasicRTXData(): #爬取所有顯卡資料 包含UID 品名 價格 數量
+        return PKData['PK'], PKData['Token'] 
+def BasicRTXData(): 
     print('建置顯卡資料中 請稍等..')
     RTX = ['RTX3090','RTX3080','6900XT''RTX3070','6800','6700XT','RTX3060']
     RTXData = dict()
     RTXHaveQty = dict()
     Headers, LocalSession = CookieSET(ChromeCookies)
     for RTX in RTX:
-        first = 1 #第一次不能用加入的 得用=號
+        first = 1 
         Qtyfirst = 1
-        time.sleep(random.randint(1,20))#隨機睡20sec
+        time.sleep(random.randint(1,20))
         PrdIfURL = 'https://ecshweb.pchome.com.tw/search/v3.3/all/results?q={}'.format(RTX)
-        PrdIfData = requests.get(PrdIfURL, headers = Headers)#第一次抓取資料
-        PrdIfData = PrdIfData.json()#轉為json
-        TotalPages = int(PrdIfData['totalPage'])#頁面數量
+        PrdIfData = requests.get(PrdIfURL, headers = Headers)
+        PrdIfData = PrdIfData.json()
+        TotalPages = int(PrdIfData['totalPage'])
         for Pages in range(1, TotalPages + 1):
             time.sleep(1)
             PrdPageURL = 'https://ecshweb.pchome.com.tw/search/v3.3/all/results?q={}&page={}'.format(RTX, Pages)
             try:
-                PrdPageData = LocalSession.get(PrdPageURL, headers = Headers)#抓每頁資料
+                PrdPageData = LocalSession.get(PrdPageURL, headers = Headers)
             except:
                 break
-            while str(PrdPageData ) == "<Response [403]>":#伺服器403不給回應 等待
+            while str(PrdPageData ) == "<Response [403]>":
                 time.sleep(1)
-                PrdPageData = LocalSession.get(PrdPageURL, headers = Headers)#抓每頁資料
+                PrdPageData = LocalSession.get(PrdPageURL, headers = Headers)
                 print('error')
             PrdPageData.encoding = 'UTF-8'
-            PrdPageJson = PrdPageData.json()#轉為json
+            PrdPageJson = PrdPageData.json()
             if  'RTX' in RTX :
                 MiniChack = RTX[3:6]
             else:
@@ -219,14 +218,14 @@ def BasicRTXData(): #爬取所有顯卡資料 包含UID 品名 價格 數量
                         QtyData = LocalSession.get(QtyURL,headers = Headers)
                     except:
                         break
-                    while str(QtyData) == "<Response [403]>":#伺服器403不給回應 等待
+                    while str(QtyData) == "<Response [403]>":
                         time.sleep(1)
                         try:
                             QtyData = LocalSession.get(QtyURL,headers = Headers)
                         except:
                             print(rows['cateId'],'抓取失敗')
                             break
-                    QtyData = re.sub('try{jsonp_prod\(|\}\);\}catch\(e\)\{if\(window.console\)\{console.log\(e\)\;\}','',QtyData.text) #將context的內容轉換為正常json格式
+                    QtyData = re.sub('try{jsonp_prod\(|\}\);\}catch\(e\)\{if\(window.console\)\{console.log\(e\)\;\}','',QtyData.text) 
                     try: 
                         QtyJson = json.loads(QtyData)#轉為json
                     except:
@@ -244,17 +243,17 @@ def BasicRTXData(): #爬取所有顯卡資料 包含UID 品名 價格 數量
                                     RTXHaveQty[RTX] = {rows['Id']:{'name':rows['name'],'price':rows['price'],'Qty':QtyJson[QtyId]['Qty']}}
                                     Qtyfirst = 2
                                 RTXHaveQty[RTX].setdefault(rows['Id'] , {'name':rows['name'],'price':rows['price'],'Qty':QtyJson[QtyId]['Qty']})
-    return RTXData, RTXHaveQty #所有資料, 有貨的資料
+    return RTXData, RTXHaveQty 
     print('已成功抓取顯卡資料')
 
 def Money():#預算
     money = int(input('預算:'))
     return money
     
-def GetinCart(RTXHaveQty,money):#放入購物車 形式為： DRAD1K-A900B1PIT': {'name': '技嘉 AORUS Radeon™ RX 6800 MASTER 16G 顯示卡', 'price': 29790, 'Qty': 1}, 'DRAD1N-A900B9KS7': {'name': 'ASUS 華碩 DUAL GeForce RTX™3060 Ti 8G 顯示卡', 'price': 16890, 'Qty': 1}}
+def GetinCart(RTXHaveQty,money):
     PaySum = 0
     Headers, LocalSession = CookieSET(ChromeCookies)
-    for BuyRTX in RTXHaveQty:#顯卡型號迴圈
+    for BuyRTX in RTXHaveQty:
         for BuyId in RTXHaveQty[BuyRTX]: 
             if (PaySum + RTXHaveQty[BuyRTX][BuyId]['price']) < Money:
                 MacUrl = 'https://24h.pchome.com.tw/prod/cart/v1/prod/'+ BuyId +'-000/snapup?_callback=jsonp_cartsnapup&' + str(now_milliseconds())
@@ -288,7 +287,7 @@ def OneClickBuy(UID,enFrmData,Ak):
     CartReturnData = CartReturn.text.replace("try{jsonp_addcart(", "")
     CartReturnData = CartReturnData.replace(");}catch(e){if(window.console){console.log(e);}}", "")
     CartReturnData = json.loads(CartReturnData)
-    time.sleep(1)#測試休眠幾秒 還可購買
+    time.sleep(1)
     print(SubmitOrder(enFrmData,Ak,enFrmUrl))
     return 0
 
@@ -301,15 +300,15 @@ def SearchListBuy(PrdList,enFrmData,Ak):
         time.sleep(5)
         PrdPageURL = 'https://ecshweb.pchome.com.tw/search/v3.3/all/results?q={}'.format(Prd)
         try:
-            PrdPageData = LocalSession.get(PrdPageURL, headers = Headers)#抓每頁資料
+            PrdPageData = LocalSession.get(PrdPageURL, headers = Headers)
         except:
             break
-        while str(PrdPageData ) == "<Response [403]>":#伺服器403不給回應 等待
+        while str(PrdPageData ) == "<Response [403]>":
             time.sleep(1)
-            PrdPageData = LocalSession.get(PrdPageURL, headers = Headers)#抓每頁資料
+            PrdPageData = LocalSession.get(PrdPageURL, headers = Headers)
             print('error')
         PrdPageData.encoding = 'UTF-8'
-        PrdPageJson = PrdPageData.json()#轉為json
+        PrdPageJson = PrdPageData.json()
         for rows in PrdPageJson['prods']:
             print(rows['name'] + " 數量:" , end='')
         QtyURL = "https://mall.pchome.com.tw/ecapi/ecshop/prodapi/v2/prod/{}&fields=Qty&_callback=jsonp_prod&1587196620".format(Prd)
@@ -317,7 +316,7 @@ def SearchListBuy(PrdList,enFrmData,Ak):
             QtyData = LocalSession.get(QtyURL,headers = Headers)
         except:
             break
-        while str(QtyData) == "<Response [403]>":#伺服器403不給回應 等待
+        while str(QtyData) == "<Response [403]>":
             time.sleep(1)
             try:
                 QtyData = LocalSession.get(QtyURL,headers = Headers)
@@ -325,9 +324,9 @@ def SearchListBuy(PrdList,enFrmData,Ak):
             except:
                 print(Prd ,'抓取失敗')
                 break
-        QtyData = re.sub('try{jsonp_prod\(|\}\);\}catch\(e\)\{if\(window.console\)\{console.log\(e\)\;\}','',QtyData.text) #將context的內容轉換為正常json格式
+        QtyData = re.sub('try{jsonp_prod\(|\}\);\}catch\(e\)\{if\(window.console\)\{console.log\(e\)\;\}','',QtyData.text) 
         try: 
-            QtyJson = json.loads(QtyData)#轉為json
+            QtyJson = json.loads(QtyData)
         except:
             print(Prd ,'轉換失敗')
             break
@@ -353,8 +352,8 @@ def Menu(Options,money,enFrmData,Ak,enFrmUrl):
                     print('RTX3060, RTX3070, RTX3080, RTX3090, 6700XT, 6800, 6900XT中')
                     print('完全沒貨')
                 else:
-                    GetinCart(RTXHaveQty,money)#將有限的價格放入購物車
-                    print('購買後回傳結果：',SubmitOrder(enFrmData,Ak,enFrmUrl))#提交訂單
+                    GetinCart(RTXHaveQty,money)
+                    print('購買後回傳結果：',SubmitOrder(enFrmData,Ak,enFrmUrl))
             elif Options == 2:
                 first = True
                 try:
@@ -370,9 +369,9 @@ def Menu(Options,money,enFrmData,Ak,enFrmUrl):
                             print('RTX3060, RTX3070, RTX3080, RTX3090, 6700XT, 6800, 6900XT中')
                             print('完全沒貨')
                         else:
-                            GetinCart(RTXHaveQty,money)#將有限的價格放入購物車
+                            GetinCart(RTXHaveQty,money)
                             time.sleep(2)
-                            print('購買後回傳結果：',SubmitOrder(EncryptionData(Ak,PersonalData()),Ak,enFrmUrl))#提交訂單
+                            print('購買後回傳結果：',SubmitOrder(EncryptionData(Ak,PersonalData()),Ak,enFrmUrl))
                             break
                 except KeyboardInterrupt:
                         print('跳出成功!')
@@ -422,7 +421,7 @@ if __name__ == '__main__':
     PK,Token = PKTokenChack()
     if PK != '':
         Options = None
-        money = Money() #預算
-        enFrmData = PersonalData() #購買資料
-        Ak = AkOutput() #加密金鑰
+        money = Money()
+        enFrmData = PersonalData()
+        Ak = AkOutput()
         Menu(Options,money,enFrmData,Ak,enFrmUrl)
