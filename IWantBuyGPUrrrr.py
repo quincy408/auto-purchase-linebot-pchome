@@ -6,6 +6,7 @@ Created on Thu Jun  3 17:45:12 2021
 """
 
 import re
+import sys
 import time
 import json
 import math
@@ -405,7 +406,7 @@ def Menu(Options,money,enFrmData,Ak,enFrmUrl):
                 Menu(None,money,enFrmData,Ak,enFrmUrl)
             elif Options == 5:
                 print("關閉程式中")
-                break
+                sys.exit()
             else:
                 print("輸入錯誤")
             Options = None
